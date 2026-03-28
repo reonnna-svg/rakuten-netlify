@@ -1,12 +1,796 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Rakuten API Test</title>
-  </head>
-  <body>
-    <h1>Rakuten API Test</h1>
-    <p>Function URL: <code>/.netlify/functions/rakuten?keyword=ベッド</code></p>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>引っ越すべき？住み続けるべき？3分診断</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=Zen+Kaku+Gothic+New:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1410;
+    --paper: #f7f3ec;
+    --accent: #c84b2f;
+    --accent2: #2d6a4f;
+    --accent3: #e8a020;
+    --muted: #8a7e72;
+    --border: #d4c8b8;
+    --card: #faf7f2;
+    --shadow: rgba(26,20,16,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Zen Kaku Gothic New', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: radial-gradient(ellipse at 20% 50%, rgba(200,75,47,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(45,106,79,0.04) 0%, transparent 60%); pointer-events: none; z-index: 0; }
+  .wrap { position: relative; z-index: 1; max-width: 700px; margin: 0 auto; padding: 0 20px 60px; }
+  header { text-align: center; padding: 44px 0 32px; }
+  header::after { content: ''; display: block; width: 80px; height: 3px; background: var(--accent); margin: 18px auto 0; }
+  .badge { display: inline-block; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; padding: 4px 12px; border-radius: 2px; margin-bottom: 14px; }
+  h1 { font-family: 'Noto Serif JP', serif; font-size: clamp(20px, 5vw, 28px); font-weight: 900; line-height: 1.4; }
+  h1 span { color: var(--accent); }
+  .subtitle { margin-top: 10px; font-size: 13px; color: var(--muted); letter-spacing: 0.05em; }
+  .progress-bar-wrap { margin: 0 0 26px; }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .progress-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent3)); border-radius: 2px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 30px; box-shadow: 0 2px 20px var(--shadow); animation: fadeUp 0.4s ease forwards; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  .step-label { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
+  .step-title { font-family: 'Noto Serif JP', serif; font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .step-desc { font-size: 13px; color: var(--muted); margin-bottom: 26px; line-height: 1.7; }
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 7px; }
+  .field label .hint { font-weight: 400; color: var(--muted); margin-left: 6px; }
+  input[type="number"] { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 3px; background: #fff; font-size: 15px; font-family: 'Zen Kaku Gothic New', sans-serif; color: var(--ink); outline: none; transition: border-color 0.2s; }
+  input[type="number"]:focus { border-color: var(--accent); }
+  .input-row { display: flex; gap: 12px; align-items: center; }
+  .input-row input { flex: 1; }
+  .input-row .unit { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .option-grid.col3 { grid-template-columns: 1fr 1fr 1fr; }
+  .option-grid.col4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .opt-btn { border: 1.5px solid var(--border); background: #fff; border-radius: 3px; padding: 11px 8px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.2s; text-align: center; color: var(--ink); line-height: 1.4; }
+  .opt-btn:hover { border-color: var(--accent); background: #fdf5f3; }
+  .opt-btn.active { border-color: var(--accent); background: #fdf5f3; color: var(--accent); font-weight: 700; }
+  .slider-field { margin-bottom: 18px; }
+  .slider-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .slider-name { font-size: 13px; font-weight: 700; }
+  .slider-val { font-size: 13px; color: var(--accent); font-weight: 700; min-width: 70px; text-align: right; }
+  input[type="range"] { width: 100%; -webkit-appearance: none; height: 4px; background: var(--border); border-radius: 2px; outline: none; cursor: pointer; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 1px 6px rgba(200,75,47,0.4); }
+  .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .check-item { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 3px; cursor: pointer; transition: all 0.2s; font-size: 13px; background: #fff; user-select: none; }
+  .check-item:hover { border-color: var(--accent); }
+  .check-item.checked { border-color: var(--accent); background: #fdf5f3; color: var(--accent); font-weight: 700; }
+  .check-icon { width: 16px; height: 16px; border: 1.5px solid var(--border); border-radius: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: all 0.2s; }
+  .check-item.checked .check-icon { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .children-list { display: flex; flex-direction: column; gap: 8px; }
+  .child-row { display: flex; gap: 10px; align-items: center; }
+  .child-row input { flex: 1; }
+  .child-row .remove-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 0 4px; transition: color 0.2s; }
+  .child-row .remove-btn:hover { color: var(--accent); }
+  .add-child-btn { margin-top: 8px; background: none; border: 1.5px dashed var(--border); border-radius: 3px; padding: 9px; width: 100%; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.2s; font-family: 'Zen Kaku Gothic New', sans-serif; }
+  .add-child-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .insight { margin-top: 18px; padding: 13px 15px; background: #fff8f0; border-left: 3px solid var(--accent3); border-radius: 0 3px 3px 0; font-size: 13px; line-height: 1.7; color: #5a4520; }
+  .insight strong { color: var(--accent); }
+  .safety-alert { margin-top: 12px; padding: 12px 14px; background: #fff3f3; border-left: 3px solid #e05050; border-radius: 0 3px 3px 0; font-size: 13px; line-height: 1.7; color: #7a2020; }
+  .btn-row { display: flex; gap: 12px; margin-top: 26px; }
+  .btn-back { flex: 1; padding: 12px; background: none; border: 1.5px solid var(--border); border-radius: 3px; font-size: 14px; font-family: 'Zen Kaku Gothic New', sans-serif; cursor: pointer; color: var(--muted); transition: all 0.2s; }
+  .btn-back:hover { border-color: var(--ink); color: var(--ink); }
+  .btn-next { flex: 2; padding: 13px; background: var(--accent); border: none; border-radius: 3px; font-size: 15px; font-weight: 700; font-family: 'Zen Kaku Gothic New', sans-serif; color: #fff; cursor: pointer; letter-spacing: 0.05em; transition: all 0.2s; box-shadow: 0 4px 14px rgba(200,75,47,0.3); }
+  .btn-next:hover { background: #b03a20; }
+
+  /* RESULT */
+  .result-verdict { text-align: center; padding: 26px 0 22px; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
+  .verdict-emoji { font-size: 46px; margin-bottom: 10px; }
+  .verdict-type { font-size: 11px; font-weight: 700; letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase; margin-bottom: 9px; }
+  .verdict-title { font-family: 'Noto Serif JP', serif; font-size: clamp(19px, 4.5vw, 25px); font-weight: 900; line-height: 1.4; margin-bottom: 9px; }
+  .verdict-title.move { color: var(--accent); }
+  .verdict-title.stay { color: var(--accent2); }
+  .verdict-title.either { color: var(--accent3); }
+  .verdict-sub { font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; margin-bottom: 13px; }
+  .score-bar-section { margin-bottom: 22px; }
+  .score-item { margin-bottom: 12px; }
+  .score-item-header { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+  .score-item-name { font-weight: 700; }
+  .score-item-val { color: var(--muted); }
+  .score-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 3px; transition: width 1.1s cubic-bezier(0.4,0,0.2,1); }
+  .score-fill.red { background: var(--accent); }
+  .score-fill.yellow { background: var(--accent3); }
+  .reasons-section { margin-bottom: 22px; }
+  .reason-item { display: flex; gap: 12px; padding: 12px 13px; border: 1px solid var(--border); border-radius: 3px; margin-bottom: 7px; background: #fff; font-size: 13px; line-height: 1.6; }
+  .reason-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .reason-text strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .cost-section { padding: 16px; background: #f0f7f3; border: 1px solid #b7d9c5; border-radius: 3px; margin-bottom: 22px; }
+  .cost-section h3 { font-size: 12px; font-weight: 700; color: var(--accent2); margin-bottom: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .cost-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; border-bottom: 1px solid #c8e0d4; }
+  .cost-row:last-child { border-bottom: none; font-weight: 700; font-size: 14px; }
+  .diagram-section { margin-bottom: 22px; }
+  .diagram-wrap { background: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 14px; overflow-x: auto; }
+  .layout-section { margin-bottom: 22px; }
+  .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .layout-tip { background: #fff; border: 1px solid var(--border); border-radius: 3px; padding: 13px; font-size: 12px; line-height: 1.7; }
+  .tip-icon { font-size: 20px; margin-bottom: 6px; }
+  .tip-title { font-weight: 700; font-size: 13px; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .safe-badge { display: inline-block; background: var(--accent2); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 2px; }
+  .warn-badge { display: inline-block; background: #e05050; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 2px; }
+  .rakuten-btn { display: inline-flex; align-items: center; gap: 5px; margin-top: 9px; padding: 6px 11px; background: #bf0000; color: #fff; border: none; border-radius: 3px; font-size: 11px; font-weight: 700; font-family: 'Zen Kaku Gothic New', sans-serif; cursor: pointer; text-decoration: none; transition: background 0.2s; }
+  .rakuten-btn:hover { background: #990000; }
+  .rakuten-btn .r-icon { font-size: 13px; }
+  .floorplan-section { margin-bottom: 22px; }
+  .upload-area { border: 2px dashed var(--border); border-radius: 4px; padding: 28px 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fff; position: relative; }
+  .upload-area:hover, .upload-area.drag { border-color: var(--accent); background: #fdf5f3; }
+  .upload-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 30px; margin-bottom: 8px; }
+  .upload-text { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .upload-sub { font-size: 12px; color: var(--muted); }
+  .upload-preview { margin-top: 14px; }
+  .upload-preview img { max-width: 100%; max-height: 200px; border-radius: 3px; border: 1px solid var(--border); }
+  .upload-name { font-size: 12px; color: var(--accent2); margin-top: 6px; font-weight: 700; }
+  .ai-loading { text-align: center; padding: 28px 20px; color: var(--muted); font-size: 14px; }
+  .ai-spinner { width: 34px; height: 34px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ai-result-box { margin-top: 16px; padding: 20px; background: #fff; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; line-height: 1.85; color: var(--ink); }
+  .ai-result-box h3 { font-family: 'Noto Serif JP', serif; font-size: 15px; margin-bottom: 12px; color: var(--accent2); }
+  .restart-btn { display: block; width: 100%; padding: 13px; background: none; border: 1.5px solid var(--border); border-radius: 3px; font-size: 14px; font-family: 'Zen Kaku Gothic New', sans-serif; cursor: pointer; color: var(--muted); transition: all 0.2s; margin-top: 10px; }
+  .restart-btn:hover { border-color: var(--ink); color: var(--ink); }
+  .api-notice { background: #f0f7f3; border: 1px solid #b7d9c5; border-radius: 3px; padding: 12px 14px; font-size: 12px; line-height: 1.7; color: #2d5a3f; margin-bottom: 12px; }
+  .api-notice strong { color: var(--accent2); }
+  .pdf-badge { display: inline-block; background: #e05020; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 2px; margin-left: 4px; }
+  .img-badge { display: inline-block; background: #3a7ab5; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 2px; margin-left: 4px; }
+  footer { text-align: center; font-size: 11px; color: var(--border); padding-top: 20px; letter-spacing: 0.06em; }
+
+  /* 商品カードグリッド */
+  .product-section { margin-bottom: 22px; }
+  .product-group { margin-bottom: 26px; }
+  .product-group-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .product-card { background: #fff; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; transition: box-shadow 0.2s; }
+  .product-card:hover { box-shadow: 0 4px 16px var(--shadow); }
+  .product-img { width: 100%; aspect-ratio: 1; object-fit: contain; padding: 8px; background: #fafafa; }
+  .product-img-placeholder { width: 100%; aspect-ratio: 1; background: #f0ece4; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+  .product-body { padding: 9px 10px; flex: 1; display: flex; flex-direction: column; gap: 5px; }
+  .product-name { font-size: 11px; line-height: 1.5; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; flex: 1; }
+  .product-price { font-size: 13px; font-weight: 700; color: var(--accent); }
+  .product-shop { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .product-buy-btn { display: block; text-align: center; padding: 8px 6px; background: #bf0000; color: #fff; font-size: 11px; font-weight: 700; text-decoration: none; transition: background 0.2s; font-family: 'Zen Kaku Gothic New', sans-serif; }
+  .product-buy-btn:hover { background: #990000; }
+  .product-loading { text-align: center; padding: 20px; color: var(--muted); font-size: 13px; }
+  .product-error  { font-size: 12px; color: var(--muted); padding: 10px 0; }
+  .rakuten-appid-notice { background: #fff8f0; border: 1px dashed #e8a020; border-radius: 3px; padding: 12px 14px; font-size: 12px; line-height: 1.7; color: #5a4520; margin-bottom: 14px; }
+  .rakuten-appid-notice a { color: #bf0000; }
+  .appid-input-row { display: flex; gap: 8px; margin-top: 8px; }
+  .appid-input-row input { flex: 1; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 3px; font-size: 12px; font-family: monospace; background: #fff; outline: none; }
+  .appid-input-row input:focus { border-color: var(--accent); }
+  .appid-save-btn { padding: 8px 14px; background: #bf0000; color: #fff; border: none; border-radius: 3px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Zen Kaku Gothic New', sans-serif; white-space: nowrap; }
+  @media (max-width: 480px) { .product-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  /* API KEY SETUP */
+  .setup-card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 36px 32px; box-shadow: 0 2px 20px var(--shadow); animation: fadeUp 0.4s ease forwards; }
+  .setup-logo { font-size: 40px; text-align: center; margin-bottom: 10px; }
+  .setup-title { font-family: 'Noto Serif JP', serif; font-size: 20px; font-weight: 900; text-align: center; margin-bottom: 6px; }
+  .setup-sub { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 28px; line-height: 1.7; }
+  .setup-steps { margin-bottom: 24px; }
+  .setup-step { display: flex; gap: 14px; margin-bottom: 16px; align-items: flex-start; }
+  .setup-step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .setup-step-body { font-size: 13px; line-height: 1.7; flex: 1; }
+  .setup-step-body strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .setup-step-body a { color: var(--accent); text-decoration: underline; }
+  .setup-step-body code { background: #f0ece4; padding: 2px 6px; border-radius: 2px; font-size: 12px; font-family: monospace; }
+  .apikey-field { position: relative; margin-bottom: 10px; }
+  .apikey-field input[type="password"], .apikey-field input[type="text"] { width: 100%; padding: 12px 44px 12px 14px; border: 1.5px solid var(--border); border-radius: 3px; font-size: 13px; font-family: monospace; background: #fff; color: var(--ink); outline: none; transition: border-color 0.2s; }
+  .apikey-field input:focus { border-color: var(--accent); }
+  .apikey-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px; color: var(--muted); padding: 0; }
+  .apikey-status { font-size: 12px; margin-bottom: 18px; min-height: 18px; }
+  .apikey-status.ok  { color: var(--accent2); }
+  .apikey-status.err { color: var(--accent); }
+  .btn-setup { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 3px; font-size: 15px; font-weight: 700; font-family: 'Zen Kaku Gothic New', sans-serif; color: #fff; cursor: pointer; letter-spacing: 0.05em; transition: all 0.2s; box-shadow: 0 4px 14px rgba(200,75,47,0.3); }
+  .btn-setup:hover { background: #b03a20; }
+  .btn-setup:disabled { background: var(--muted); box-shadow: none; cursor: not-allowed; }
+  .cost-note { background: #fff8f0; border-left: 3px solid var(--accent3); padding: 11px 14px; font-size: 12px; line-height: 1.7; color: #5a4520; border-radius: 0 3px 3px 0; margin-bottom: 20px; }
+  .apikey-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #f0f7f3; border: 1px solid #b7d9c5; border-radius: 3px; margin-bottom: 16px; font-size: 12px; color: #2d5a3f; }
+  .apikey-bar .key-icon { font-size: 16px; }
+  .apikey-bar .key-val { flex: 1; font-family: monospace; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .apikey-bar .change-btn { background: none; border: 1px solid #b7d9c5; border-radius: 2px; padding: 3px 8px; font-size: 11px; color: var(--accent2); cursor: pointer; font-family: 'Zen Kaku Gothic New', sans-serif; white-space: nowrap; }
+  .apikey-bar .change-btn:hover { background: #e0f0e8; }
+  @media (max-width: 480px) {
+    .card { padding: 20px 16px; }
+    .option-grid.col4 { grid-template-columns: 1fr 1fr; }
+    .btn-row { flex-direction: column; }
+    .layout-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge">宅建士監修 ✦ 無料診断</div>
+    <h1>引っ越すべき？<br><span>住み続けるべき？</span></h1>
+    <p class="subtitle">法律・お金・生活 —— 3つの視点で、あなたの最適解を導き出す</p>
+  </header>
+  <div class="progress-bar-wrap">
+    <div class="progress-meta">
+      <span id="stepLabel">STEP 1 / 5</span>
+      <span id="stepPct">20%</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:20%"></div></div>
+  </div>
+  <div id="appRoot"></div>
+  <footer>© 住まい診断ツール — 宅建士ベース算定 — 参考情報です、専門家にご相談ください</footer>
+</div>
+
+<script>
+// APIキーをlocalStorageから復元
+const state = {
+  step:1, adults:2, children:[], futureChildren:false, pregnant:false,
+  madori:'', area:'', age:'',
+  stress:{narrow:0,storage:0,noise:0,childSpace:0},
+  contract:{renewal:'',penalty:'',rent:''},
+  costs:{initial:'',moving:'',furniture:''},
+  floorplanBase64:null, floorplanMediaType:null
+};
+
+// ── 楽天API設定 ───────────────────────────────────────────────────
+// applicationId はサーバーサイド（Netlify Functions）で管理するため、ここには置かない
+const RAKUTEN_AFF_ID   = '52436724.dfd51e22.52436725.31def4bc';
+const RAKUTEN_API_BASE = '/.netlify/functions/rakuten';
+
+// 楽天URL生成はbuildProductCardHtml内でaff済みURLを直接使用
+
+function getMinArea(adults, children) {
+  let u = parseInt(adults)||0;
+  for (const a of children) { const ag=parseInt(a)||0; u += ag<6?0.25:ag<10?0.75:1; }
+  return Math.max(25, Math.ceil(u*10));
+}
+function getRecommendedArea(adults, children) {
+  let u = parseInt(adults)||0;
+  for (const a of children) { const ag=parseInt(a)||0; u += ag<6?0.25:ag<10?0.75:1; }
+  return Math.max(40, Math.ceil(u*20+15));
+}
+function hasInfant()     { return state.children.some(a=>parseInt(a)<=2); }
+function hasYoungChild() { return state.children.some(a=>parseInt(a)<=5); }
+
+function render() {
+  const root = document.getElementById('appRoot');
+  const totalSteps = 5;
+  const pct = state.step>totalSteps?100:Math.round((state.step/totalSteps)*100);
+  document.getElementById('stepLabel').textContent = state.step>totalSteps?'RESULT':`STEP ${state.step} / ${totalSteps}`;
+  document.getElementById('stepPct').textContent = pct+'%';
+  document.getElementById('progressFill').style.width = pct+'%';
+  if      (state.step===1) renderStep1(root);
+  else if (state.step===2) renderStep2(root);
+  else if (state.step===3) renderStep3(root);
+  else if (state.step===4) renderStep4(root);
+  else if (state.step===5) renderStep5(root);
+  else                     renderResult(root);
+}
+
+// ─── STEP 1 ─────────────────────────────────────────────────────
+function renderStep1(root) {
+  root.innerHTML = `
+  <div class="card">
+    <div class="step-label">STEP 01 — FAMILY</div>
+    <div class="step-title">家族構成を教えてください</div>
+    <p class="step-desc">居住面積の基準算定と、お子さまの安全を考慮したアドバイス生成に使用します。</p>
+    <div class="field">
+      <label>大人の人数</label>
+      <div class="input-row"><input type="number" id="adults" min="1" max="10" value="${state.adults}"><span class="unit">人</span></div>
+    </div>
+    <div class="field">
+      <label>子どもの年齢 <span class="hint">（いない場合は空欄）</span></label>
+      <div class="children-list" id="childrenList"></div>
+      <button class="add-child-btn" id="addChildBtn">＋ 子どもを追加</button>
+    </div>
+    <div class="field">
+      <label>将来の人数変化</label>
+      <div class="check-grid">
+        <div class="check-item ${state.pregnant?'checked':''}" id="pregnantCheck"><div class="check-icon">${state.pregnant?'✓':''}</div>妊娠中</div>
+        <div class="check-item ${state.futureChildren?'checked':''}" id="futureCheck"><div class="check-icon">${state.futureChildren?'✓':''}</div>子どもを予定</div>
+      </div>
+    </div>
+    <div class="btn-row"><button class="btn-next" id="next1">次へ →</button></div>
+  </div>`;
+  renderChildren();
+  document.getElementById('adults').addEventListener('input', e=>{state.adults=e.target.value;});
+  document.getElementById('addChildBtn').addEventListener('click', ()=>{state.children.push('');renderChildren();});
+  document.getElementById('pregnantCheck').addEventListener('click', ()=>{state.pregnant=!state.pregnant;renderStep1(root);});
+  document.getElementById('futureCheck').addEventListener('click', ()=>{state.futureChildren=!state.futureChildren;renderStep1(root);});
+  document.getElementById('next1').addEventListener('click', ()=>{state.step=2;render();});
+}
+function renderChildren() {
+  const list = document.getElementById('childrenList'); if(!list) return;
+  list.innerHTML = state.children.map((age,i)=>`
+    <div class="child-row">
+      <input type="number" min="0" max="18" placeholder="年齢（歳）" value="${age}" data-idx="${i}" class="child-age-input">
+      <span class="unit">歳</span>
+      <button class="remove-btn" data-idx="${i}">×</button>
+    </div>`).join('');
+  list.querySelectorAll('.child-age-input').forEach(el=>el.addEventListener('input',e=>{state.children[parseInt(e.target.dataset.idx)]=e.target.value;}));
+  list.querySelectorAll('.remove-btn').forEach(el=>el.addEventListener('click',e=>{state.children.splice(parseInt(e.target.dataset.idx),1);renderChildren();}));
+}
+
+// ─── STEP 2 ─────────────────────────────────────────────────────
+function renderStep2(root) {
+  const minArea=getMinArea(state.adults,state.children), recArea=getRecommendedArea(state.adults,state.children);
+  const madoriOpts=['1R/1K','1DK','1LDK','2DK','2LDK','3DK','3LDK','4LDK以上'];
+  root.innerHTML = `
+  <div class="card">
+    <div class="step-label">STEP 02 — RESIDENCE</div>
+    <div class="step-title">現在のお住まいを教えてください</div>
+    <p class="step-desc">国交省の「最低居住水準」と照合し、住まいの適正度を判定します。</p>
+    <div class="field">
+      <label>間取り</label>
+      <div class="option-grid col4">${madoriOpts.map(m=>`<button class="opt-btn ${state.madori===m?'active':''}" data-val="${m}">${m}</button>`).join('')}</div>
+    </div>
+    <div class="field" style="margin-top:14px">
+      <label>専有面積</label>
+      <div class="input-row"><input type="number" id="areaInput" min="1" max="500" value="${state.area}" placeholder="60"><span class="unit">㎡</span></div>
+    </div>
+    <div class="field">
+      <label>築年数</label>
+      <div class="input-row"><input type="number" id="ageInput" min="0" max="80" value="${state.age}" placeholder="10"><span class="unit">年</span></div>
+    </div>
+    <div class="insight" id="areaInsight">📐 <strong>あなたの家族構成での居住水準</strong><br>最低居住面積：<strong>${minArea}㎡</strong>（国交省基準）　推奨：<strong>${recArea}㎡</strong>${state.area&&parseFloat(state.area)<minArea?'<br>⚠️ <strong style="color:#c84b2f">現在の面積は最低基準を下回っています</strong>':''}</div>
+    <div class="btn-row">
+      <button class="btn-back" id="back2">← 戻る</button>
+      <button class="btn-next" id="next2">次へ →</button>
+    </div>
+  </div>`;
+  root.querySelectorAll('.opt-btn').forEach(btn=>btn.addEventListener('click',()=>{state.madori=btn.dataset.val;root.querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}));
+  document.getElementById('areaInput').addEventListener('input',e=>{
+    state.area=e.target.value;
+    const a=parseFloat(e.target.value);
+    document.getElementById('areaInsight').innerHTML=`📐 <strong>あなたの家族構成での居住水準</strong><br>最低居住面積：<strong>${minArea}㎡</strong>（国交省基準）　推奨：<strong>${recArea}㎡</strong>${a<minArea?'<br>⚠️ <strong style="color:#c84b2f">現在の面積は最低基準を下回っています</strong>':''}`;
+  });
+  document.getElementById('ageInput').addEventListener('input',e=>{state.age=e.target.value;});
+  document.getElementById('back2').addEventListener('click',()=>{state.step=1;render();});
+  document.getElementById('next2').addEventListener('click',()=>{state.step=3;render();});
+}
+
+// ─── STEP 3 ─────────────────────────────────────────────────────
+function renderStep3(root) {
+  const labels=['まったくない','少しある','かなりある','非常に強い','限界'];
+  const items=[{key:'narrow',label:'🏠 部屋の狭さ'},{key:'storage',label:'📦 収納の不足'},{key:'noise',label:'🔊 騒音・振動'},{key:'childSpace',label:'👶 子どものスペース'}];
+  root.innerHTML = `
+  <div class="card">
+    <div class="step-label">STEP 03 — STRESS</div>
+    <div class="step-title">不満・ストレスの度合いは？</div>
+    <p class="step-desc">各項目の不満度をスライドで入力してください。引っ越し判断スコアに直結します。</p>
+    ${items.map(item=>`
+    <div class="slider-field">
+      <div class="slider-header"><span class="slider-name">${item.label}</span><span class="slider-val" id="val_${item.key}">${labels[state.stress[item.key]]}</span></div>
+      <input type="range" min="0" max="4" step="1" value="${state.stress[item.key]}" data-key="${item.key}">
+    </div>`).join('')}
+    <div class="insight" id="stressInsight">😐 スライダーを動かして不満度を入力してください。</div>
+    <div class="btn-row">
+      <button class="btn-back" id="back3">← 戻る</button>
+      <button class="btn-next" id="next3">次へ →</button>
+    </div>
+  </div>`;
+  root.querySelectorAll('input[type="range"]').forEach(el=>el.addEventListener('input',e=>{
+    state.stress[e.target.dataset.key]=parseInt(e.target.value);
+    document.getElementById('val_'+e.target.dataset.key).textContent=labels[state.stress[e.target.dataset.key]];
+    const total=Object.values(state.stress).reduce((a,b)=>a+b,0), pct=Math.round(total/16*100);
+    document.getElementById('stressInsight').innerHTML=pct>=75?'⚠️ <strong>生活ストレスが非常に高い状態です。</strong>引っ越しを強く検討する段階かもしれません。':pct>=50?'😓 <strong>中〜高程度のストレスが蓄積しています。</strong>物理的な限界とそうでない部分を切り分けましょう。':pct>=25?'🙂 <strong>軽度の不満があります。</strong>家具配置の見直しで改善できる可能性があります。':'😊 <strong>現在の住環境に大きな不満はないようです。</strong>';
+  }));
+  document.getElementById('back3').addEventListener('click',()=>{state.step=2;render();});
+  document.getElementById('next3').addEventListener('click',()=>{state.step=4;render();});
+}
+
+// ─── STEP 4 ─────────────────────────────────────────────────────
+function renderStep4(root) {
+  root.innerHTML = `
+  <div class="card">
+    <div class="step-label">STEP 04 — CONTRACT</div>
+    <div class="step-title">契約条件を確認しましょう</div>
+    <p class="step-desc">「今引っ越すと損か？」を宅建的視点で判断します。</p>
+    <div class="field">
+      <label>月額家賃 <span class="hint">（管理費込み）</span></label>
+      <div class="input-row"><input type="number" id="rentInput" min="0" value="${state.contract.rent}" placeholder="80000"><span class="unit">円/月</span></div>
+    </div>
+    <div class="field">
+      <label>更新料</label>
+      <div class="option-grid">${['なし','家賃0.5ヶ月','家賃1ヶ月','家賃2ヶ月'].map(v=>`<button class="opt-btn renewal-btn ${state.contract.renewal===v?'active':''}" data-val="${v}">${v}</button>`).join('')}</div>
+    </div>
+    <div class="field">
+      <label>違約金・早期解約金</label>
+      <div class="option-grid">${['なし','家賃1ヶ月','家賃2ヶ月','家賃3ヶ月以上'].map(v=>`<button class="opt-btn penalty-btn ${state.contract.penalty===v?'active':''}" data-val="${v}">${v}</button>`).join('')}</div>
+    </div>
+    <div class="insight">⚖️ <strong>宅建ポイント：</strong>違約金が家賃2ヶ月を超える場合、法的に争える可能性があります。更新直前が最も金銭的に有利なタイミングです。</div>
+    <div class="btn-row">
+      <button class="btn-back" id="back4">← 戻る</button>
+      <button class="btn-next" id="next4">次へ →</button>
+    </div>
+  </div>`;
+  document.getElementById('rentInput').addEventListener('input',e=>{state.contract.rent=e.target.value;});
+  root.querySelectorAll('.renewal-btn').forEach(btn=>btn.addEventListener('click',()=>{state.contract.renewal=btn.dataset.val;root.querySelectorAll('.renewal-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}));
+  root.querySelectorAll('.penalty-btn').forEach(btn=>btn.addEventListener('click',()=>{state.contract.penalty=btn.dataset.val;root.querySelectorAll('.penalty-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}));
+  document.getElementById('back4').addEventListener('click',()=>{state.step=3;render();});
+  document.getElementById('next4').addEventListener('click',()=>{state.step=5;render();});
+}
+
+// ─── STEP 5 ─────────────────────────────────────────────────────
+function renderStep5(root) {
+  root.innerHTML = `
+  <div class="card">
+    <div class="step-label">STEP 05 — COSTS</div>
+    <div class="step-title">引っ越しコストの概算</div>
+    <p class="step-desc">引っ越した場合の総コストを入力してください。「家賃何ヶ月分か」で損得を判断します。</p>
+    <div class="field">
+      <label>新居の初期費用 <span class="hint">（敷金・礼金・仲介手数料等）</span></label>
+      <div class="input-row"><input type="number" id="initialInput" min="0" value="${state.costs.initial}" placeholder="400000"><span class="unit">円</span></div>
+    </div>
+    <div class="field">
+      <label>引っ越し費用</label>
+      <div class="input-row"><input type="number" id="movingInput" min="0" value="${state.costs.moving}" placeholder="100000"><span class="unit">円</span></div>
+    </div>
+    <div class="field">
+      <label>家具・家電の買い替え <span class="hint">（概算）</span></label>
+      <div class="input-row"><input type="number" id="furnitureInput" min="0" value="${state.costs.furniture}" placeholder="50000"><span class="unit">円</span></div>
+    </div>
+    <div class="insight">💡 一般的に引っ越しコストは<strong>家賃3〜6ヶ月分</strong>が目安。これを上回る場合、住み続けた方が経済的なケースが多いです。</div>
+    <div class="btn-row">
+      <button class="btn-back" id="back5">← 戻る</button>
+      <button class="btn-next" id="next5">診断する ✦</button>
+    </div>
+  </div>`;
+  document.getElementById('initialInput').addEventListener('input',e=>{state.costs.initial=e.target.value;});
+  document.getElementById('movingInput').addEventListener('input',e=>{state.costs.moving=e.target.value;});
+  document.getElementById('furnitureInput').addEventListener('input',e=>{state.costs.furniture=e.target.value;});
+  document.getElementById('back5').addEventListener('click',()=>{state.step=4;render();});
+  document.getElementById('next5').addEventListener('click',()=>{state.step=6;render();});
+}
+
+// ─── RESULT ─────────────────────────────────────────────────────
+function renderResult(root) {
+  const adults=parseInt(state.adults)||2;
+  const minArea=getMinArea(adults,state.children);
+  const recArea=getRecommendedArea(adults,state.children);
+  const area=parseFloat(state.area)||0;
+  const buildingAge=parseInt(state.age)||0;
+  const rent=parseFloat(state.contract.rent)||0;
+  const initial=parseFloat(state.costs.initial)||0;
+  const moving=parseFloat(state.costs.moving)||0;
+  const furniture=parseFloat(state.costs.furniture)||0;
+  let penaltyAmt=0;
+  if(state.contract.penalty==='家賃1ヶ月') penaltyAmt=rent;
+  else if(state.contract.penalty==='家賃2ヶ月') penaltyAmt=rent*2;
+  else if(state.contract.penalty==='家賃3ヶ月以上') penaltyAmt=rent*3;
+  const totalCost=initial+moving+furniture+penaltyAmt;
+  const costMonths=rent>0?(totalCost/rent).toFixed(1):'?';
+  const stressTotal=Object.values(state.stress).reduce((a,b)=>a+b,0);
+  const stressPct=Math.round(stressTotal/16*100);
+  let areaStatus='適正', areaPct=15;
+  if(area>0&&area<minArea){areaStatus='最低基準以下';areaPct=90;}
+  else if(area>0&&area<recArea){areaStatus='やや不足';areaPct=55;}
+  const costOK=parseFloat(costMonths)<=4;
+  const costPct=costOK?20:Math.min(90,parseFloat(costMonths||0)*10);
+  const moveScore=(stressPct*0.35)+(areaPct*0.35)+(costOK?10:60)*0.2+((state.futureChildren||state.pregnant)?70:10)*0.1;
+  let verdict,verdictClass,emoji,verdictSub;
+  if(moveScore>=65){verdict='引っ越しを推奨します';verdictClass='move';emoji='🚚';const urgency=(state.futureChildren||state.pregnant)?'3〜6ヶ月以内':'半年〜1年以内';verdictSub=`生活ストレス・居住面積・将来計画を総合判断した結果、<strong>${urgency}</strong>の引っ越しが最適です。`;}
+  else if(moveScore<=35){verdict='住み続けるのが賢明です';verdictClass='stay';emoji='🏡';verdictSub='コスト・契約・居住状況を考慮すると、引っ越しコストに見合うメリットが少ない状態です。まずは現空間の最適化を検討しましょう。';}
+  else{verdict='どちらでもOK（条件次第）';verdictClass='either';emoji='⚖️';verdictSub='明確な優劣はありません。下の判断フロー図を参考に、ご自身の優先度で決めてください。';}
+  const reasons=[];
+  if(stressPct>=60) reasons.push({icon:'😓',title:'生活ストレスが高い',text:`ストレスレベル ${stressPct}%。特に「${getTopStress()}」が顕著です。`});
+  if(area>0&&area<minArea) reasons.push({icon:'📐',title:'面積が国交省最低基準を下回る',text:`現在${area}㎡ に対し最低${minArea}㎡。法的・健康的リスクがあります。`});
+  else if(area>0&&area<recArea) reasons.push({icon:'📏',title:'推奨面積をやや下回る',text:`現在${area}㎡。推奨${recArea}㎡に対してやや不足しています。`});
+  if(state.futureChildren||state.pregnant) reasons.push({icon:'👶',title:'家族増加が見込まれる',text:'現居住面積が近い将来確実に不足します。早めの検討が得策です。'});
+  if(buildingAge>40) reasons.push({icon:'🏚️',title:'築年数が40年超',text:'旧耐震基準（1981年以前）の可能性があります。耐震性の確認を推奨します。'});
+  if(!costOK&&parseFloat(costMonths)>0) reasons.push({icon:'💸',title:`引っ越しコストが家賃${costMonths}ヶ月分`,text:`総費用 ${Math.round(totalCost/10000)}万円 はかなりの負担です。タイミングの最適化が重要です。`});
+  const layoutTips=getSafeLayoutTips();
+  const decisionSvg=buildDecisionSvg(verdictClass,stressPct,areaPct,costOK,state.futureChildren||state.pregnant);
+
+  root.innerHTML = `
+  <div class="card">
+    <div class="result-verdict">
+      <div class="verdict-emoji">${emoji}</div>
+      <div class="verdict-type">DIAGNOSIS RESULT</div>
+      <div class="verdict-title ${verdictClass}">${verdict}</div>
+      <p class="verdict-sub">${verdictSub}</p>
+    </div>
+
+    <div class="score-bar-section">
+      <div class="section-title">📊 スコア詳細</div>
+      <div class="score-item">
+        <div class="score-item-header"><span class="score-item-name">生活ストレス</span><span class="score-item-val">${stressPct}%</span></div>
+        <div class="score-track"><div class="score-fill red" data-w="${stressPct}" style="width:0%"></div></div>
+      </div>
+      <div class="score-item">
+        <div class="score-item-header"><span class="score-item-name">面積の逼迫度</span><span class="score-item-val">${areaStatus}</span></div>
+        <div class="score-track"><div class="score-fill red" data-w="${areaPct}" style="width:0%"></div></div>
+      </div>
+      <div class="score-item">
+        <div class="score-item-header"><span class="score-item-name">引っ越しコスト負荷</span><span class="score-item-val">家賃${costMonths}ヶ月分</span></div>
+        <div class="score-track"><div class="score-fill yellow" data-w="${Math.min(costPct,100)}" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    ${reasons.length>0?`<div class="reasons-section"><div class="section-title">📋 判断の根拠</div>${reasons.map(r=>`<div class="reason-item"><div class="reason-icon">${r.icon}</div><div class="reason-text"><strong>${r.title}</strong>${r.text}</div></div>`).join('')}</div>`:''}
+
+    <div class="diagram-section">
+      <div class="section-title">🗺️ 意思決定フロー図</div>
+      <div class="diagram-wrap">${decisionSvg}</div>
+    </div>
+
+    <div class="cost-section">
+      <h3>💰 引っ越しコスト内訳</h3>
+      <div class="cost-row"><span>新居 初期費用</span><span>${initial>0?Math.round(initial/10000)+'万円':'未入力'}</span></div>
+      <div class="cost-row"><span>引っ越し費用</span><span>${moving>0?Math.round(moving/10000)+'万円':'未入力'}</span></div>
+      <div class="cost-row"><span>家具・家電</span><span>${furniture>0?Math.round(furniture/10000)+'万円':'未入力'}</span></div>
+      ${penaltyAmt>0?`<div class="cost-row"><span>違約金</span><span>${Math.round(penaltyAmt/10000)}万円</span></div>`:''}
+      <div class="cost-row"><span>合計</span><span>${totalCost>0?Math.round(totalCost/10000)+'万円':'—'}</span></div>
+    </div>
+
+    <div class="layout-section">
+      <div class="section-title">🛋️ 空間活用アドバイス <span style="font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--accent2)">— お子さまの年齢を考慮済み</span></div>
+      <div id="rakutenIdBar"></div>
+      <div class="layout-grid">${layoutTips.map(t=>`
+        <div class="layout-tip">
+          <div class="tip-icon">${t.icon}</div>
+          <div class="tip-title">${t.title} ${t.safe?'<span class="safe-badge">✓ 安全</span>':t.warn?'<span class="warn-badge">⚠ NG</span>':''}</div>
+          <div style="font-size:12px;line-height:1.7">${t.text}</div>
+          ${t.rakuten?`<a class="rakuten-btn" href="https://search.rakuten.co.jp/search/mall/${encodeURIComponent(t.rakuten)}/" target="_blank" rel="noopener"><span class="r-icon">🛒</span>楽天で探す</a>`:''}
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="floorplan-section">
+      <div class="section-title">🛒 あなたの診断結果に合わせた商品</div>
+      <div id="productResultArea"></div>
+    </div>
+
+    <button class="restart-btn" id="restartBtn">↺ もう一度診断する</button>
+  </div>`;
+
+  setTimeout(()=>{root.querySelectorAll('.score-fill[data-w]').forEach(el=>setTimeout(()=>{el.style.width=el.dataset.w+'%';},80));},100);
+  document.getElementById('restartBtn').addEventListener('click',()=>{Object.assign(state,{step:1,adults:2,children:[],futureChildren:false,pregnant:false,madori:'',area:'',age:'',stress:{narrow:0,storage:0,noise:0,childSpace:0},contract:{renewal:'',penalty:'',rent:''},costs:{initial:'',moving:'',furniture:''},floorplanBase64:null,floorplanMediaType:null});render();});
+  loadDiagnosisProducts();
+}
+
+// ─── SVG フロー図 ────────────────────────────────────────────────
+function buildDecisionSvg(verdictClass, stressPct, areaPct, costOK, futureKids) {
+  const accent='#c84b2f', green='#2d6a4f', gold='#e8a020', gray='#b0a090';
+  const resultColor = verdictClass==='move'?accent:verdictClass==='stay'?green:gold;
+  const resultLabel = verdictClass==='move'?'🚚 引っ越し推奨':verdictClass==='stay'?'🏡 住み続けを推奨':'⚖️ どちらでもOK';
+
+  const factors = [
+    { label:'生活ストレス', sub: stressPct>=60?`高い (${stressPct}%)`:`低い (${stressPct}%)`, hot: stressPct>=60 },
+    { label:'居住面積',     sub: areaPct>=55?'不足':'十分',  hot: areaPct>=55 },
+    { label:'引越コスト',   sub: !costOK?'高コスト':'許容内', hot: !costOK },
+    { label:'家族増加',     sub: futureKids?'予定あり':'なし',hot: futureKids },
+  ];
+
+  const FW=120, FH=54, GAP=14;
+  const totalW=factors.length*(FW+GAP)-GAP;
+  const SVG_W=Math.max(totalW+40, 500);
+  const startX=(SVG_W-totalW)/2;
+
+  let factorBoxes='', connLines='';
+  const centerX=SVG_W/2, midY=120;
+
+  factors.forEach((f,i)=>{
+    const x=startX+i*(FW+GAP);
+    const bx=x, by=10, bw=FW, bh=FH;
+    const fc=f.hot?accent:gray;
+    const bg=f.hot?'#fdf0ed':'#f5f5f2';
+    factorBoxes+=`
+      <rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="5" fill="${bg}" stroke="${fc}" stroke-width="1.5"/>
+      <text x="${bx+bw/2}" y="${by+19}" text-anchor="middle" font-size="11" font-weight="700" fill="${fc}">${f.label}</text>
+      <text x="${bx+bw/2}" y="${by+37}" text-anchor="middle" font-size="11" fill="${fc}">${f.sub}</text>`;
+    const fx=bx+bw/2, fy=by+bh;
+    const fc2=f.hot?accent:gray;
+    connLines+=`<path d="M${fx},${fy} C${fx},${fy+20} ${centerX},${midY-20} ${centerX},${midY}" stroke="${fc2}" stroke-width="1.5" fill="none" stroke-dasharray="4,3"/>`;
+  });
+
+  // 結果ノード
+  const rw=200, rh=48, rx=(SVG_W-rw)/2, ry=midY;
+  // 下段アクション
+  const actions=[];
+  if(verdictClass==='stay'||verdictClass==='either') actions.push({label:'🛋️ 空間を最適化',sub:'家具配置・収納改善',c:green,bg:'#f0f7f3'});
+  if(verdictClass==='move'||verdictClass==='either') actions.push({label:'🚚 引っ越しを検討',sub:'更新タイミングを計算',c:accent,bg:'#fdf0ed'});
+  actions.push({label:'📅 タイミング最適化',sub:'閑散期・更新直前を狙う',c:gold,bg:'#fff8f0'});
+
+  const AWall=actions.length*(140+12)-12;
+  const aStartX=(SVG_W-AWall)/2;
+  let actionBoxes='', actionLines='';
+  actions.forEach((a,i)=>{
+    const ax=aStartX+i*(140+12), ay=midY+rh+40, aw=140, ah=50;
+    actionBoxes+=`
+      <rect x="${ax}" y="${ay}" width="${aw}" height="${ah}" rx="4" fill="${a.bg}" stroke="${a.c}" stroke-width="1.5"/>
+      <text x="${ax+aw/2}" y="${ay+19}" text-anchor="middle" font-size="11" font-weight="700" fill="${a.c}">${a.label}</text>
+      <text x="${ax+aw/2}" y="${ay+36}" text-anchor="middle" font-size="10" fill="${a.c}">${a.sub}</text>`;
+    const acx=ax+aw/2, acy=ay;
+    actionLines+=`<path d="M${centerX},${ry+rh} C${centerX},${ry+rh+16} ${acx},${acy-16} ${acx},${acy}" stroke="${a.c}" stroke-width="1.5" fill="none" stroke-dasharray="4,3"/>`;
+  });
+
+  const SVG_H=midY+rh+40+50+20;
+  return `<svg viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${SVG_W}px;font-family:'Zen Kaku Gothic New',sans-serif">
+    ${factorBoxes}
+    ${connLines}
+    <rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" rx="6" fill="${resultColor}"/>
+    <text x="${centerX}" y="${ry+rh/2+5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">${resultLabel}</text>
+    ${actionLines}
+    ${actionBoxes}
+  </svg>`;
+}
+
+// ─── 安全考慮済みアドバイス ──────────────────────────────────────
+function getSafeLayoutTips() {
+  const infant=hasInfant(), young=hasYoungChild();
+  const tips=[];
+
+  if(infant) {
+    tips.push({icon:'🛏️',title:'ロフトベッドは使用NG',warn:true,safe:false,text:'0〜2歳の乳幼児がいるため、ロフトベッドは転落の危険があります。脚なしローベッドや床置きマットレスで床面を広く使いましょう。',rakuten:'ローベッド マットレス 赤ちゃん'});
+    tips.push({icon:'🔒',title:'家具の転倒防止固定',safe:true,warn:false,text:'棚・シェルフ・冷蔵庫はすべて壁に転倒防止固定を。乳幼児がよじ登れる低い家具を減らし、床面積を最大化しましょう。',rakuten:'転倒防止 突っ張り棒 家具固定'});
+    tips.push({icon:'🧸',title:'床面積を最大化',safe:true,warn:false,text:'ハイソファより床座スタイル（折りたたみテーブル＋クッション）を採用。ハイハイ〜歩き始めに広い床面積は発達にも安全にも有効です。',rakuten:'折りたたみ ローテーブル 赤ちゃん'});
+    tips.push({icon:'📦',title:'収納を天井方向へ集約',safe:true,warn:false,text:'床面の物を減らし収納を壁面上部へ。乳幼児の手の届かない高さに危険物を集約し、安全で広いプレイゾーンを確保します。',rakuten:'ウォールシェルフ 壁面収納 赤ちゃん対応'});
+  } else if(young) {
+    tips.push({icon:'🛏️',title:'ロフトベッドは慎重に',warn:true,safe:false,text:'5歳以下のお子さまへのロフトベッドは転落リスクがあります。使う場合は柵付き・低め設計で、子どもが一人で登れない配置にしてください。',rakuten:'ロフトベッド 柵付き 子供 低め'});
+    tips.push({icon:'🗄️',title:'オープン棚で空間を分割',safe:true,warn:false,text:'LDKにオープンシェルフを置いて子どものプレイゾーンを区切ることで、3LDK風の空間分けが可能です。必ず転倒防止固定を。',rakuten:'オープンシェルフ 間仕切り 壁固定'});
+    tips.push({icon:'🔒',title:'コーナーガード設置',safe:true,warn:false,text:'テーブル・棚の角にシリコン製コーナーガードを全箇所設置。転倒時の頭部衝撃を大幅に軽減できます。',rakuten:'コーナーガード シリコン 赤ちゃん 角'});
+    tips.push({icon:'📦',title:'クローゼット内を縦分割',safe:true,warn:false,text:'市販の収納ユニットでクローゼット内を縦に仕切り、収納量を2〜3倍に。下段を子どものおもちゃ収納にすれば床面積も確保できます。',rakuten:'クローゼット 収納ユニット 仕切り'});
+  } else {
+    tips.push({icon:'🛏️',title:'ロフトベッドで床面積確保',safe:true,warn:false,text:'お子さまが6歳以上のため安全に使用可能。床面積を最大30%拡張でき、空いたスペースに学習コーナーを作れます。',rakuten:'ロフトベッド 子供 学習机付き'});
+    tips.push({icon:'🗄️',title:'オープン棚で部屋を分割',safe:true,warn:false,text:'LDKにオープンシェルフを置いて子どものプレイゾーンを区切り、3LDK風の空間分けが可能です。転倒防止固定は必須です。',rakuten:'オープンシェルフ 間仕切り リビング'});
+    tips.push({icon:'📦',title:'クローゼット縦分割で収納増',safe:true,warn:false,text:'収納ユニットでクローゼット内を縦に仕切り、収納量を2〜3倍に。引っ越しなしに居住性を大幅改善できます。',rakuten:'クローゼット 収納ユニット 押入れ 仕切り'});
+    tips.push({icon:'🪞',title:'壁面全体を収納に活用',safe:true,warn:false,text:'ウォールシェルフを壁面一面に設置。床面積を維持しながら収納量を増やす、狭い住居の定番手法です。',rakuten:'壁面収納 ウォールシェルフ 突っ張り'});
+  }
+  return tips;
+}
+
+// ─── 間取り図アップロード ＋ API ─────────────────────────────────
+
+// ── 診断結果から楽天検索キーワードを自動生成 ─────────────────────
+function buildSearchGroups() {
+  const infant = hasInfant();
+  const young  = hasYoungChild();
+  const kids   = state.children;
+  const madori = state.madori;
+  const stress = state.stress;
+  const groups = [];
+
+  // ① 子どもの年齢ベース（安全考慮）
+  if (infant) {
+    groups.push({ label:'🍼 転倒防止・家具固定グッズ', keyword:'家具転倒防止 突っ張り棒 ベビー' });
+    groups.push({ label:'🧸 ベビーサークル',            keyword:'ベビーサークル プレイマット 折りたたみ' });
+    groups.push({ label:'🛏️ ローベッド・ベビー布団',   keyword:'ローベッド 赤ちゃん マットレス' });
+    groups.push({ label:'🔒 コーナーガード',            keyword:'コーナーガード テーブル 赤ちゃん シリコン' });
+  } else if (young) {
+    groups.push({ label:'🛡️ けが防止グッズ',           keyword:'コーナーガード 転倒防止 子ども 安全' });
+    groups.push({ label:'🎒 おもちゃ収納・絵本棚',     keyword:'おもちゃ収納 キッズ 棚 絵本ラック' });
+    groups.push({ label:'🪑 キッズチェア・デスク',     keyword:'学習椅子 キッズデスク 子ども用' });
+  } else if (kids.length > 0) {
+    groups.push({ label:'📚 学習デスク・チェア',        keyword:'学習机 椅子 セット 高さ調整' });
+    groups.push({ label:'🛏️ ロフトベッド',             keyword:'ロフトベッド 学習机 子ども 木製' });
+    groups.push({ label:'📦 子ども部屋収納',            keyword:'収納ボックス キャスター付き 子ども部屋' });
+  }
+
+  // ② 間取りベース
+  if (['1R/1K','1DK'].includes(madori)) {
+    groups.push({ label:'🪑 折りたたみ家具',            keyword:'折りたたみ テーブル チェア 一人暮らし' });
+    groups.push({ label:'📐 壁面収納',                  keyword:'突っ張り棒 ウォールシェルフ 壁面収納' });
+  } else if (['1LDK','2DK'].includes(madori)) {
+    groups.push({ label:'🗄️ 間仕切りシェルフ',         keyword:'オープンシェルフ 間仕切り リビング 収納' });
+    groups.push({ label:'📦 クローゼット収納',          keyword:'クローゼット 収納ユニット 仕切り 引き出し' });
+  } else if (['2LDK','3DK'].includes(madori)) {
+    groups.push({ label:'🗄️ リビング収納',             keyword:'リビング 収納 シェルフ テレビ台 壁面' });
+    groups.push({ label:'🛋️ コンパクトソファ',         keyword:'ソファ コンパクト 2人掛け ファブリック' });
+  } else {
+    groups.push({ label:'🛏️ ベッドフレーム',            keyword:'ベッドフレーム セミダブル 収納付き 木製' });
+    groups.push({ label:'📦 大容量収納家具',            keyword:'収納家具 ボックス おしゃれ 木製 大容量' });
+  }
+
+  // ③ ストレスベース
+  if (stress.storage >= 2) {
+    groups.push({ label:'📦 収納ボックス',              keyword:'収納ボックス 積み重ね ふた付き おしゃれ' });
+    groups.push({ label:'🧹 隙間収納',                 keyword:'突っ張り棒 デッドスペース 収納 隙間' });
+  }
+  if (stress.narrow >= 2) {
+    groups.push({ label:'🪞 省スペース家具',            keyword:'省スペース 多機能 家具 コンパクト' });
+  }
+  if (stress.noise >= 2) {
+    groups.push({ label:'🔇 防音カーテン・シート',      keyword:'遮音カーテン 防音シート 賃貸 吸音' });
+  }
+  if (stress.childSpace >= 2) {
+    groups.push({ label:'🎨 プレイマット',              keyword:'プレイマット ジョイントマット 子ども 厚手' });
+  }
+  if (state.futureChildren || state.pregnant) {
+    groups.push({ label:'🍼 出産準備グッズ',            keyword:'ベビーベッド 添い寝 折りたたみ 安全' });
+  }
+
+  // 重複除去・最大8件
+  const seen = new Set();
+  return groups.filter(g => !seen.has(g.label) && seen.add(g.label)).slice(0, 8);
+}
+
+// ── 楽天商品検索（Netlify Functions 経由 / CORS対応）────────────
+async function rakutenFetch(keyword) {
+  const params = new URLSearchParams({
+    keyword,
+    hits: '3',
+    page: '1',
+    sort: 'standard',
+  });
+  const res = await fetch(`${RAKUTEN_API_BASE}?${params}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return data.items || [];
+}
+// ── 楽天商品カードのHTML生成 ─────────────────────────────────────
+function buildProductCardHtml(item) {
+  const price   = parseInt(item.itemPrice || 0).toLocaleString();
+  const name    = (item.itemName  || '').replace(/</g, '&lt;').slice(0, 55);
+  const shop    = (item.shopName  || '').replace(/</g, '&lt;');
+  // Netlify Functions 軽量レスポンスでは imageUrl が文字列で直接返る
+  const imgUrl  = item.imageUrl || '';
+  const rawUrl  = item.itemUrl || '#';
+  // アフィリエイトリンク形式に変換
+  const buyUrl  = RAKUTEN_AFF_ID
+    ? 'https://hb.afl.rakuten.co.jp/hgc/' + RAKUTEN_AFF_ID + '/?pc=' + encodeURIComponent(rawUrl) + '&m=' + encodeURIComponent(rawUrl)
+    : rawUrl;
+
+  return '<div class="product-card">'
+    + (imgUrl ? '<img class="product-img" src="' + imgUrl + '" alt="' + name + '" loading="lazy">' : '<div class="product-img-placeholder">📦</div>')
+    + '<div class="product-body">'
+    + '<div class="product-name">' + name + '</div>'
+    + '<div class="product-price">¥' + price + '</div>'
+    + '<div class="product-shop">' + shop + '</div>'
+    + '</div>'
+    + '<a class="product-buy-btn" href="' + buyUrl + '" target="_blank" rel="noopener">楽天で購入 →</a>'
+    + '</div>';
+}
+
+// ── メイン：診断完了後に商品を読み込む ──────────────────────────
+async function loadDiagnosisProducts() {
+  const container = document.getElementById('productResultArea');
+  if (!container) return;
+
+  const groups = buildSearchGroups();
+  if (groups.length === 0) return;
+
+  container.innerHTML = `<div class="ai-loading"><div class="ai-spinner"></div>楽天で商品を検索中...<br><small style="color:#aaa;display:block;margin-top:4px">${groups.length}カテゴリを検索しています</small></div>`;
+
+  // Netlify Functions 経由で直列取得（並列だとレート制限に当たりやすいため）
+  const results = [];
+  for (const g of groups) {
+    try {
+      const items = await rakutenFetch(g.keyword);
+      if (items.length > 0) results.push({ label: g.label, items });
+    } catch (e) {
+      console.warn('検索失敗:', g.keyword, e.message);
+    }
+  }
+
+  if (results.length === 0) {
+    container.innerHTML = `<div class="safety-alert">⚠️ 商品の取得に失敗しました。しばらく経ってから再度お試しください。</div>`;
+    return;
+  }
+
+  let html = '<div class="product-section">';
+  for (const g of results) {
+    html += `<div class="product-group">
+      <div class="product-group-title"><span>🛒</span>${g.label}</div>
+      <div class="product-grid">`;
+    for (const item of g.items.slice(0, 3)) {
+      html += buildProductCardHtml(item);
+    }
+    html += `</div></div>`;
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function getTopStress() {
+  const map={narrow:'部屋の狭さ',storage:'収納不足',noise:'騒音',childSpace:'子どもスペース'};
+  let max=-1,key='narrow';
+  for(const k of Object.keys(state.stress)){if(state.stress[k]>max){max=state.stress[k];key=k;}}
+  return map[key];
+}
+
+render();
+</script>
+</body>
 </html>
